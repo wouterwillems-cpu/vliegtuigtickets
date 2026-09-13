@@ -144,6 +144,27 @@ input[type=text]:focus, input[type=date]:focus, input[type=number]:focus, select
 .chips a{font-size:13px; text-decoration:none; color:var(--ink); background:var(--surface-2); border:1px solid var(--line); border-radius:20px; padding:6px 12px}
 .chips a:hover{border-color:var(--accent); color:var(--accent-ink)}
 
+/* Claude results panel */
+.results-card{margin-top:20px}
+.res-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+@media(max-width:720px){.res-grid{grid-template-columns:1fr}}
+.res{background:var(--surface-2); border:1px solid var(--line); border-radius:11px; padding:14px 16px; display:flex; flex-direction:column; gap:9px}
+.res .res-hd{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+.res .res-hd .code{font-family:"Space Mono",monospace; font-weight:700; color:#fff; background:var(--accent); padding:3px 9px; border-radius:6px; font-size:14px}
+.res .res-hd .rt{font-weight:600; font-size:16px}
+.res .res-hd .when{margin-left:auto; font-size:11px; color:var(--ink-faint); font-family:"Space Mono",monospace}
+.res .range{font-size:12.5px; color:var(--ink-soft); margin-top:-2px}
+.offer{display:grid; grid-template-columns:18px 1fr auto; gap:10px; align-items:center; padding:8px 0; border-top:1px solid var(--line)}
+.offer .rank{font-family:"Space Mono",monospace; font-weight:700; font-size:12px; color:var(--ink-faint)}
+.offer .info{min-width:0}
+.offer .info .air{font-weight:600; font-size:14px}
+.offer .info .tm{font-size:12px; color:var(--ink-soft)}
+.offer .price{font-family:"Space Mono",monospace; font-weight:700; font-size:17px; color:var(--ready); white-space:nowrap; font-variant-numeric:tabular-nums}
+.offer.top .price{color:var(--accent-ink)}
+.offer.top .info .air::after{content:"goedkoopste"; font-family:"Barlow",sans-serif; font-weight:700; font-size:9.5px; letter-spacing:.04em; text-transform:uppercase; color:var(--ready); background:var(--ready-soft); padding:1px 6px; border-radius:20px; margin-left:7px; vertical-align:1px}
+.res .res-note{font-size:12px; color:var(--ink-soft); background:var(--surface); border-radius:8px; padding:8px 10px; border-left:3px solid var(--deal)}
+.res .res-open{align-self:flex-start; margin-top:1px}
+
 /* favorites / track */
 .fav-row{display:flex; align-items:center; gap:10px; background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin-bottom:8px}
 .fav-row .code{font-family:"Space Mono",monospace; font-weight:700; color:var(--accent-ink); background:var(--surface-2); border:1px solid var(--line); padding:3px 8px; border-radius:6px; flex:none}
@@ -332,6 +353,15 @@ footer .fi{max-width:1120px; margin:0 auto; padding:20px; font-size:12.5px; colo
       </div>
     </section>
   </div>
+
+  <!-- Claude results -->
+  <section class="card results-card" aria-label="Opgezochte prijzen">
+    <div class="hd"><span class="num">5</span><h2>Goedkoopste prijzen · opgezocht door Claude</h2></div>
+    <div class="bd">
+      <p class="note" style="margin-top:0">Momentopnames uit Google Vluchten — rechtstreeks vanuit Zaventem, retour, 1 persoon, economy. Vraag me gerust <em>"zoek de goedkoopste naar &lt;bestemming&gt;"</em>, dan werk ik dit bij en publiceer de app opnieuw. Voor <strong>live</strong> prijzen: open de vergelijker of zet een prijsalert (hierboven).</p>
+      <div class="res-grid" id="resGrid"></div>
+    </div>
+  </section>
 </main>
 
 <button class="tt" id="themeToggle" aria-label="Wissel licht/donker thema">◐ Thema</button>
@@ -716,10 +746,65 @@ $("#themeToggle").addEventListener("click",()=>{
   try{ localStorage.setItem(TH_KEY,next); }catch(e){}
 });
 
+/* ---------------- Claude results panel ---------------- */
+const CLAUDE_RESULTS = [
+  {
+    dest:"Barcelona", iata:"BCN", range:"za 31 okt – wo 4 nov 2026 · 4 nachten", when:"13 sep 2026",
+    outIso:"2026-10-31", inIso:"2026-11-04",
+    offers:[
+      {air:"Vueling / Iberia", tm:"heen 21:55–23:59 · rechtstreeks", price:"€173"},
+      {air:"Vueling / Iberia", tm:"heen 14:00–16:00 · rechtstreeks", price:"€293"},
+      {air:"Brussels Airlines", tm:"heen 14:50–16:50 · rechtstreeks", price:"€427"}
+    ],
+    note:"Met vlucht + trein via Parijs kan het €165, maar dat is 6–11u reistijd met overstap. Google-tip: reizen van 1–5 nov kan al vanaf €117."
+  },
+  {
+    dest:"Alicante", iata:"ALC", range:"za 31 okt – wo 4 nov 2026 · 4 nachten", when:"13 sep 2026",
+    outIso:"2026-10-31", inIso:"2026-11-04",
+    offers:[
+      {air:"Vueling / Iberia", tm:"heen 14:00–16:25 · rechtstreeks", price:"€344"},
+      {air:"Brussels Airlines", tm:"heen 14:35–17:05 · rechtstreeks", price:"€379"},
+      {air:"Transavia", tm:"heen 15:30–18:00 · rechtstreeks", price:"€423"}
+    ],
+    note:"Vanuit Charleroi (CRL) is Ryanair rechtstreeks €210 — fors goedkoper als je tóch van Charleroi wil. Vanuit Zaventem met 1 overstap vanaf €197 (14u via Wenen — niet de moeite)."
+  }
+];
+function renderResults(){
+  const grid=$("#resGrid"); if(!grid) return; grid.innerHTML="";
+  CLAUDE_RESULTS.forEach(r=>{
+    const c=document.createElement("div"); c.className="res";
+    const hd=document.createElement("div"); hd.className="res-hd";
+    const code=document.createElement("span"); code.className="code"; code.textContent=r.iata;
+    const rt=document.createElement("span"); rt.className="rt"; rt.textContent="BRU → "+r.dest;
+    const when=document.createElement("span"); when.className="when"; when.textContent="opgezocht "+r.when;
+    hd.append(code,rt,when);
+    const range=document.createElement("div"); range.className="range"; range.textContent=r.range;
+    c.append(hd,range);
+    r.offers.forEach((o,i)=>{
+      const of=document.createElement("div"); of.className="offer"+(i===0?" top":"");
+      const rk=document.createElement("span"); rk.className="rank"; rk.textContent=(i+1)+".";
+      const info=document.createElement("div"); info.className="info";
+      const air=document.createElement("div"); air.className="air"; air.textContent=o.air;
+      const tm=document.createElement("div"); tm.className="tm"; tm.textContent=o.tm;
+      info.append(air,tm);
+      const pr=document.createElement("div"); pr.className="price"; pr.textContent=o.price;
+      of.append(rk,info,pr); c.append(of);
+    });
+    const note=document.createElement("div"); note.className="res-note"; note.textContent=r.note;
+    c.append(note);
+    const open=document.createElement("a"); open.className="btn ghost sm res-open"; open.target="_blank"; open.rel="noopener";
+    open.textContent="Bekijk actuele prijs ↗";
+    open.href=`https://www.skyscanner.be/transport/vluchten/bru/${r.iata.toLowerCase()}/${skyDate(r.outIso)}/${skyDate(r.inIso)}/?adultsv2=1&cabinclass=economy&rtn=1&preferdirects=true&currency=EUR&market=BE&locale=nl-BE`;
+    c.append(open);
+    grid.append(c);
+  });
+}
+
 /* ---------------- Init ---------------- */
 renderSites();
 restoreSession();
 renderFavs();
+renderResults();
 refresh();
 </script>
 </body>

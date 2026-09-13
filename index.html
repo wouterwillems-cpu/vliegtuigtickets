@@ -1,0 +1,726 @@
+<!doctype html>
+<html lang="nl-BE">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zaventem Vluchtzoeker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap">
+<style>
+:root{
+  --paper:#F4F2EE; --surface:#FFFFFF; --surface-2:#ECEAE4; --surface-3:#E3E0D8;
+  --ink:#1B242E; --ink-soft:#57626D; --ink-faint:#8A939D; --line:#DAD6CD; --line-strong:#C4BFB4;
+  --accent:#C0392B; --accent-ink:#912A1F; --accent-soft:#F3E1DE;
+  --ready:#1C7E52; --ready-soft:#DDEEE4;
+  --deal:#B26E0E; --deal-soft:#F5E9D4;
+  --board-bg:#141D27; --board-ink:#F4F2EE; --board-amber:#F2B33B; --board-green:#5FD39B;
+  --shadow:0 1px 2px rgba(20,29,39,.05), 0 6px 20px rgba(20,29,39,.06);
+  --radius:12px;
+}
+:root:not([data-theme="light"]){
+  @media (prefers-color-scheme: dark){
+    --paper:#111820; --surface:#1A222C; --surface-2:#222C38; --surface-3:#2A3542;
+    --ink:#ECEFF2; --ink-soft:#9EA9B4; --ink-faint:#6E7A85; --line:#2E3945; --line-strong:#3B4855;
+    --accent:#E15A4A; --accent-ink:#F0897C; --accent-soft:#33221F;
+    --ready:#3BBC84; --ready-soft:#16281F;
+    --deal:#E0A63A; --deal-soft:#2C2314;
+    --board-bg:#0B1219; --board-ink:#F4F2EE;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#111820; --surface:#1A222C; --surface-2:#222C38; --surface-3:#2A3542;
+  --ink:#ECEFF2; --ink-soft:#9EA9B4; --ink-faint:#6E7A85; --line:#2E3945; --line-strong:#3B4855;
+  --accent:#E15A4A; --accent-ink:#F0897C; --accent-soft:#33221F;
+  --ready:#3BBC84; --ready-soft:#16281F;
+  --deal:#E0A63A; --deal-soft:#2C2314;
+  --board-bg:#0B1219; --board-ink:#F4F2EE;
+  --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:"Barlow", Arial, sans-serif; font-size:16px; line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{font-family:"Barlow Semi Condensed", Arial, sans-serif; line-height:1.1; text-wrap:balance; margin:0}
+.mono{font-family:"Space Mono", ui-monospace, monospace}
+a{color:var(--accent-ink)}
+.wrap{max-width:1120px; margin:0 auto; padding-inline:20px; padding-block:0}
+
+/* ---------- Header / board ---------- */
+header.top{background:var(--board-bg); color:var(--board-ink); border-bottom:3px solid var(--accent)}
+.top-inner{max-width:1120px; margin:0 auto; padding:22px 20px 26px; display:flex; flex-direction:column; gap:16px}
+.brand{display:flex; align-items:center; gap:12px; flex-wrap:wrap}
+.brand .glyph{font-family:"Space Mono",monospace; font-weight:700; font-size:13px; letter-spacing:.15em; color:var(--board-bg); background:var(--board-amber); padding:4px 8px; border-radius:5px}
+.brand h1{font-size:clamp(26px,4.4vw,40px); font-weight:700; color:var(--board-ink); letter-spacing:.01em}
+.brand .sub{color:#B9C2CC; font-size:14px; max-width:60ch}
+.board{display:flex; align-items:center; gap:14px; flex-wrap:wrap; background:rgba(0,0,0,.28); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:12px 16px}
+.board .leg{display:flex; flex-direction:column; gap:2px}
+.board .leg .lbl{font-size:10px; letter-spacing:.18em; text-transform:uppercase; color:#8D97A2}
+.board .code{font-family:"Space Mono",monospace; font-weight:700; font-size:30px; color:var(--board-amber); line-height:1}
+.board .code.dest{color:var(--board-green)}
+.board .city{font-size:12px; color:#B9C2CC; max-width:16ch; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.board .arrow{color:#5A6570; font-size:26px; padding:0 2px}
+.board .lock{font-size:11px; color:#8D97A2; align-self:flex-start; margin-top:2px}
+
+/* ---------- Layout ---------- */
+main{padding-block:26px 60px}
+.grid-main{display:grid; grid-template-columns:1.05fr .95fr; gap:20px; align-items:start}
+@media(max-width:860px){.grid-main{grid-template-columns:1fr}}
+
+.card{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow)}
+.card .hd{display:flex; align-items:center; gap:10px; padding:14px 18px; border-bottom:1px solid var(--line)}
+.card .hd h2{font-size:19px; font-weight:600}
+.card .hd .num{font-family:"Space Mono",monospace; font-size:12px; font-weight:700; color:#fff; background:var(--accent); width:22px; height:22px; border-radius:6px; display:grid; place-items:center; flex:none}
+.card .bd{padding:18px}
+
+/* ---------- Form ---------- */
+label.field{display:block; margin-bottom:14px}
+label.field > .cap{display:block; font-size:12px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:5px}
+input[type=text], input[type=date], input[type=number], select{
+  width:100%; font:inherit; color:var(--ink); background:var(--surface-2);
+  border:1px solid var(--line-strong); border-radius:9px; padding:10px 12px;
+}
+input[type=text]:focus, input[type=date]:focus, input[type=number]:focus, select:focus{
+  outline:2px solid var(--accent); outline-offset:1px; border-color:var(--accent);
+}
+.dest-wrap{position:relative}
+.suggest{position:absolute; z-index:30; top:calc(100% + 4px); left:0; right:0; background:var(--surface);
+  border:1px solid var(--line-strong); border-radius:10px; box-shadow:var(--shadow); max-height:280px; overflow:auto; padding:4px}
+.suggest button{display:flex; width:100%; align-items:center; gap:10px; background:none; border:none; text-align:left;
+  padding:9px 10px; border-radius:7px; cursor:pointer; color:var(--ink); font:inherit}
+.suggest button:hover, .suggest button.hi{background:var(--accent-soft)}
+.suggest .code{font-family:"Space Mono",monospace; font-weight:700; font-size:13px; color:var(--accent-ink); background:var(--surface-2); border:1px solid var(--line); padding:2px 6px; border-radius:5px; flex:none; min-width:44px; text-align:center}
+.suggest .txt{display:flex; flex-direction:column}
+.suggest .txt b{font-weight:600; font-size:14px}
+.suggest .txt span{font-size:12px; color:var(--ink-soft)}
+.row2{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+.row3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px}
+@media(max-width:520px){.row3{grid-template-columns:1fr 1fr}}
+
+.seg{display:inline-flex; background:var(--surface-2); border:1px solid var(--line-strong); border-radius:9px; padding:3px; gap:2px}
+.seg button{font:inherit; font-weight:600; font-size:14px; border:none; background:none; color:var(--ink-soft); padding:7px 14px; border-radius:6px; cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--accent); color:#fff}
+
+.check{display:flex; align-items:center; gap:9px; padding:9px 0; cursor:pointer}
+.check input{width:18px; height:18px; accent-color:var(--accent); flex:none}
+.check .ct{font-size:14.5px}
+.check .hint{font-size:12px; color:var(--ink-soft)}
+
+.btn{font:inherit; font-weight:600; cursor:pointer; border-radius:10px; border:1px solid transparent; padding:12px 18px; display:inline-flex; align-items:center; justify-content:center; gap:8px; text-decoration:none}
+.btn.primary{background:var(--accent); color:#fff; width:100%; font-size:17px; padding:15px}
+.btn.primary:hover{filter:brightness(1.06)}
+.btn.ghost{background:var(--surface-2); color:var(--ink); border-color:var(--line-strong)}
+.btn.ghost:hover{border-color:var(--accent)}
+.btn.sm{padding:8px 12px; font-size:13.5px; border-radius:8px}
+
+.tips{background:var(--surface-2); border:1px dashed var(--line-strong); border-radius:10px; padding:12px 14px; margin-top:6px}
+.tips summary{cursor:pointer; font-weight:600; font-size:14px; color:var(--ink)}
+.tips ul{margin:10px 0 2px; padding-left:20px}
+.tips li{font-size:13.5px; color:var(--ink-soft); margin-bottom:6px}
+.tips b{color:var(--ink)}
+
+/* ---------- Site cards ---------- */
+.sites-group{margin-bottom:20px}
+.sites-group > h3{font-size:13px; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-soft); margin:0 0 10px; display:flex; align-items:center; gap:8px}
+.sites-group > h3::after{content:""; flex:1; height:1px; background:var(--line)}
+.site-list{display:flex; flex-direction:column; gap:8px}
+.site{display:flex; align-items:center; gap:12px; background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:11px 13px}
+.site .logo{width:38px; height:38px; border-radius:8px; flex:none; display:grid; place-items:center; font-family:"Space Mono",monospace; font-weight:700; font-size:13px; color:#fff; letter-spacing:-.02em}
+.site .meta{flex:1; min-width:0}
+.site .meta .nm{font-weight:600; font-size:15px; display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+.site .meta .ds{font-size:12.5px; color:var(--ink-soft); margin-top:1px}
+.badge{font-size:10.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; padding:2px 7px; border-radius:20px; white-space:nowrap}
+.badge.ready{background:var(--ready-soft); color:var(--ready)}
+.badge.open{background:var(--surface-3); color:var(--ink-soft)}
+.badge.deal{background:var(--deal-soft); color:var(--deal)}
+.site .go{flex:none}
+
+/* airline chips */
+.chips{display:flex; flex-wrap:wrap; gap:7px}
+.chips a{font-size:13px; text-decoration:none; color:var(--ink); background:var(--surface-2); border:1px solid var(--line); border-radius:20px; padding:6px 12px}
+.chips a:hover{border-color:var(--accent); color:var(--accent-ink)}
+
+/* favorites / track */
+.fav-row{display:flex; align-items:center; gap:10px; background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin-bottom:8px}
+.fav-row .code{font-family:"Space Mono",monospace; font-weight:700; color:var(--accent-ink); background:var(--surface-2); border:1px solid var(--line); padding:3px 8px; border-radius:6px; flex:none}
+.fav-row .nm{flex:1; min-width:0; font-size:14px}
+.fav-row .nm small{display:block; color:var(--ink-soft); font-size:12px}
+.fav-row button.rm{background:none; border:none; color:var(--ink-faint); cursor:pointer; font-size:18px; line-height:1; flex:none}
+.fav-row button.rm:hover{color:var(--accent)}
+.empty{font-size:13.5px; color:var(--ink-soft); padding:8px 2px}
+
+.note{font-size:12.5px; color:var(--ink-soft); margin-top:10px}
+.note strong{color:var(--ink)}
+
+/* theme toggle */
+.tt{position:fixed; right:14px; bottom:14px; z-index:50; background:var(--surface); color:var(--ink); border:1px solid var(--line-strong); border-radius:22px; padding:8px 14px; font:inherit; font-size:13px; font-weight:600; cursor:pointer; box-shadow:var(--shadow)}
+
+footer{border-top:1px solid var(--line); margin-top:10px}
+footer .fi{max-width:1120px; margin:0 auto; padding:20px; font-size:12.5px; color:var(--ink-soft)}
+
+@media (prefers-reduced-motion: reduce){*{scroll-behavior:auto !important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-inner">
+    <div class="brand">
+      <span class="glyph">✈ BRU</span>
+      <div>
+        <h1>Zaventem Vluchtzoeker</h1>
+      </div>
+    </div>
+    <p class="sub">Eén vertrekpunt — Brussels Airport. Vul je bestemming en filters in, en open in één klik alle vergelijkers en boekingssites, telkens al vooraf ingevuld. Zo vind je snel de goedkoopste.</p>
+    <div class="board" id="board">
+      <div class="leg">
+        <span class="lbl">Vertrek</span>
+        <span class="code">BRU</span>
+        <span class="city">Brussel · Zaventem</span>
+      </div>
+      <span class="arrow">→</span>
+      <div class="leg">
+        <span class="lbl">Bestemming</span>
+        <span class="code dest" id="boardDest">— — —</span>
+        <span class="city" id="boardCity">kies een bestemming</span>
+      </div>
+      <span class="lock" title="Vertrek staat vast op Zaventem">🔒 vertrek vast</span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="grid-main">
+
+    <!-- LEFT: search controls -->
+    <section class="card" aria-label="Zoekopdracht">
+      <div class="hd"><span class="num">1</span><h2>Je zoekopdracht</h2></div>
+      <div class="bd">
+        <label class="field dest-wrap">
+          <span class="cap">Bestemming</span>
+          <input type="text" id="dest" autocomplete="off" placeholder="Stad, luchthaven of IATA-code (bv. Barcelona / BCN)">
+          <div class="suggest" id="suggest" hidden></div>
+        </label>
+
+        <label class="field">
+          <span class="cap">Type reis</span>
+          <span class="seg" role="group" aria-label="Type reis">
+            <button type="button" id="tRet" aria-pressed="true">Retour</button>
+            <button type="button" id="tOne" aria-pressed="false">Enkele reis</button>
+          </span>
+        </label>
+
+        <div class="row2">
+          <label class="field">
+            <span class="cap">Vertrekdatum</span>
+            <input type="date" id="dOut">
+          </label>
+          <label class="field" id="dInWrap">
+            <span class="cap">Terugdatum</span>
+            <input type="date" id="dIn">
+          </label>
+        </div>
+
+        <label class="check" for="flex">
+          <input type="checkbox" id="flex">
+          <span class="ct">Flexibele data <span class="hint">— toon prijskalender / hele maand waar mogelijk (Skyscanner & Google Flights)</span></span>
+        </label>
+
+        <div class="row3">
+          <label class="field">
+            <span class="cap">Volwassenen</span>
+            <input type="number" id="adults" min="1" max="9" value="1">
+          </label>
+          <label class="field">
+            <span class="cap">Kinderen</span>
+            <input type="number" id="children" min="0" max="9" value="0">
+          </label>
+          <label class="field">
+            <span class="cap">Klasse</span>
+            <select id="cabin">
+              <option value="economy">Economy</option>
+              <option value="premium">Premium economy</option>
+              <option value="business">Business</option>
+              <option value="first">First</option>
+            </select>
+          </label>
+        </div>
+
+        <label class="check" for="direct">
+          <input type="checkbox" id="direct">
+          <span class="ct">Alleen rechtstreekse vluchten</span>
+        </label>
+        <label class="check" for="cabinbag">
+          <input type="checkbox" id="cabinbag">
+          <span class="ct">Let op enkel handbagage <span class="hint">— reminder bij lowcost: vergelijk de échte prijs mét bagage</span></span>
+        </label>
+
+        <details class="tips">
+          <summary>💡 Extra filters & bespaartips</summary>
+          <ul>
+            <li><b>Flexibel = goedkoper.</b> Zet je data 1–3 dagen los; dinsdag/woensdag en vroege of late vluchten zijn vaak stukken goedkoper.</li>
+            <li><b>Skyscanner "Overal".</b> Nog geen bestemming? Op Skyscanner kun je vertrek BRU → "Overal" zoeken en zo de goedkoopste bestemming vinden.</li>
+            <li><b>Prijskalender / hele maand.</b> Vink "Flexibele data" aan om per maand de goedkoopste dag te zien.</li>
+            <li><b>Echte prijs mét bagage.</b> Bij Ryanair/lowcost lijkt de ticketprijs laag; tel handbagage/ruimbagage en stoelkeuze erbij voor een eerlijke vergelijking.</li>
+            <li><b>Nabije luchthavens.</b> Voor sommige bestemmingen loont een nabije aankomstluchthaven; de vergelijkers tonen dat automatisch.</li>
+            <li><b>Boek in incognito.</b> Voorkomt dat prijzen "meestijgen" bij herhaald zoeken.</li>
+            <li><b>Charleroi (CRL).</b> Jij vertrekt bewust vanuit Zaventem, maar de allergoedkoopste lowcost vertrekt soms vanuit Brussel-Zuid Charleroi — de moeite om af en toe te checken.</li>
+          </ul>
+        </details>
+      </div>
+    </section>
+
+    <!-- RIGHT: sites -->
+    <section class="card" aria-label="Sites doorzoeken">
+      <div class="hd"><span class="num">2</span><h2>Zoek op alle sites</h2></div>
+      <div class="bd">
+        <a class="btn primary" id="openAll" href="#" role="button">🔎 Open alle vergelijkers vooraf ingevuld</a>
+        <p class="note" id="popupNote"><strong>Tip:</strong> je browser opent meerdere tabbladen tegelijk. Sta pop-ups toe voor deze pagina als er maar één opent — of gebruik de losse "Openen"-knoppen hieronder.</p>
+
+        <div class="sites-group" style="margin-top:18px">
+          <h3>Vergelijkers · doorzoeken alle maatschappijen</h3>
+          <div class="site-list" id="metaList"></div>
+        </div>
+
+        <div class="sites-group">
+          <h3>Reisbureaus &amp; boekingssites</h3>
+          <div class="site-list" id="otaList"></div>
+        </div>
+
+        <div class="sites-group">
+          <h3>Maatschappijen vanuit Zaventem · rechtstreeks boeken</h3>
+          <div class="chips" id="airlineChips"></div>
+          <p class="note">Maatschappijen openen op hun eigen site (behalve Ryanair, die vult vooraf in). Handig als je punten/voordelen bij één maatschappij wil, of om een gevonden prijs rechtstreeks te boeken zonder tussenpersoon.</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Track + favorites -->
+  <div class="grid-main" style="margin-top:20px">
+    <section class="card" aria-label="Prijs volgen">
+      <div class="hd"><span class="num">3</span><h2>Mailalert bij prijsdaling</h2></div>
+      <div class="bd">
+        <p style="margin:0 0 14px; font-size:14.5px; color:var(--ink-soft)">
+          Google en Skyscanner sturen je <b style="color:var(--ink)">gratis een e-mail</b> zodra de prijs voor een route zakt. Zet het één keer op — daarna hoef je niets meer te doen.
+        </p>
+        <a class="btn ghost" id="trackGoogle" href="#" target="_blank" rel="noopener" style="width:100%; margin-bottom:8px">🔔 Volg deze route op Google Flights</a>
+        <a class="btn ghost" id="trackSky" href="#" target="_blank" rel="noopener" style="width:100%">🔔 Zet prijsalert op Skyscanner</a>
+
+        <details class="tips" style="margin-top:14px" open>
+          <summary>Hoe stel ik de mailalert in? (1 minuut)</summary>
+          <ul>
+            <li><b>Google Flights:</b> klik hierboven, log in met je Google-account, en zet bovenaan de schakelaar <b>"Prijzen bijhouden"</b> aan. Je krijgt automatisch een mail bij elke prijsdaling voor die route.</li>
+            <li><b>Skyscanner:</b> klik hierboven, log in, en klik bij de zoekresultaten op <b>"Prijsalert aanmaken"</b> (belletje). Skyscanner mailt je bij stijging én daling.</li>
+            <li><b>Nog geen datum?</b> Google Flights kan ook een hele route volgen zonder vaste datum — ideaal om de goedkoopste periode af te wachten.</li>
+          </ul>
+        </details>
+      </div>
+    </section>
+
+    <section class="card" aria-label="Favoriete bestemmingen">
+      <div class="hd"><span class="num">4</span><h2>Mijn bestemmingen</h2></div>
+      <div class="bd">
+        <div style="display:flex; gap:8px; margin-bottom:14px">
+          <button class="btn ghost sm" id="saveFav" style="flex:1">★ Bewaar huidige bestemming</button>
+        </div>
+        <div id="favList"></div>
+        <p class="note">Bewaarde bestemmingen blijven op dit toestel staan. Klik op een bestemming om ze meteen weer in te vullen.</p>
+      </div>
+    </section>
+  </div>
+</main>
+
+<button class="tt" id="themeToggle" aria-label="Wissel licht/donker thema">◐ Thema</button>
+
+<footer>
+  <div class="fi">
+    Persoonlijke hulptool · vertrek altijd vanuit Brussels Airport (BRU, Zaventem). Prijzen en beschikbaarheid staan altijd op de sites zelf — deze tool vult je zoekopdracht alleen vooraf in.
+  </div>
+</footer>
+
+<script>
+"use strict";
+
+/* ---------------- Airport database ---------------- */
+/* c = stad, n = luchthaven, i = IATA, k = land */
+const AIRPORTS = [
+{c:"Barcelona",n:"El Prat",i:"BCN",k:"Spanje"},{c:"Madrid",n:"Barajas",i:"MAD",k:"Spanje"},
+{c:"Malaga",n:"Costa del Sol",i:"AGP",k:"Spanje"},{c:"Alicante",n:"",i:"ALC",k:"Spanje"},
+{c:"Palma de Mallorca",n:"",i:"PMI",k:"Spanje"},{c:"Ibiza",n:"",i:"IBZ",k:"Spanje"},
+{c:"Valencia",n:"",i:"VLC",k:"Spanje"},{c:"Sevilla",n:"",i:"SVQ",k:"Spanje"},
+{c:"Bilbao",n:"",i:"BIO",k:"Spanje"},{c:"Tenerife-Zuid",n:"Reina Sofía",i:"TFS",k:"Spanje"},
+{c:"Tenerife-Noord",n:"",i:"TFN",k:"Spanje"},{c:"Gran Canaria",n:"Las Palmas",i:"LPA",k:"Spanje"},
+{c:"Lanzarote",n:"",i:"ACE",k:"Spanje"},{c:"Fuerteventura",n:"",i:"FUE",k:"Spanje"},
+{c:"Lissabon",n:"",i:"LIS",k:"Portugal"},{c:"Porto",n:"",i:"OPO",k:"Portugal"},
+{c:"Faro",n:"Algarve",i:"FAO",k:"Portugal"},{c:"Funchal",n:"Madeira",i:"FNC",k:"Portugal"},
+{c:"Rome",n:"Fiumicino",i:"FCO",k:"Italië"},{c:"Milaan",n:"Malpensa",i:"MXP",k:"Italië"},
+{c:"Milaan",n:"Linate",i:"LIN",k:"Italië"},{c:"Bergamo",n:"Milaan-Bergamo",i:"BGY",k:"Italië"},
+{c:"Venetië",n:"Marco Polo",i:"VCE",k:"Italië"},{c:"Napels",n:"",i:"NAP",k:"Italië"},
+{c:"Bologna",n:"",i:"BLQ",k:"Italië"},{c:"Florence",n:"",i:"FLR",k:"Italië"},
+{c:"Catania",n:"Sicilië",i:"CTA",k:"Italië"},{c:"Palermo",n:"Sicilië",i:"PMO",k:"Italië"},
+{c:"Bari",n:"",i:"BRI",k:"Italië"},{c:"Turijn",n:"",i:"TRN",k:"Italië"},
+{c:"Nice",n:"Côte d'Azur",i:"NCE",k:"Frankrijk"},{c:"Parijs",n:"Charles de Gaulle",i:"CDG",k:"Frankrijk"},
+{c:"Parijs",n:"Orly",i:"ORY",k:"Frankrijk"},{c:"Marseille",n:"",i:"MRS",k:"Frankrijk"},
+{c:"Lyon",n:"",i:"LYS",k:"Frankrijk"},{c:"Toulouse",n:"",i:"TLS",k:"Frankrijk"},
+{c:"Bordeaux",n:"",i:"BOD",k:"Frankrijk"},{c:"Nantes",n:"",i:"NTE",k:"Frankrijk"},
+{c:"Londen",n:"Heathrow",i:"LHR",k:"VK"},{c:"Londen",n:"Gatwick",i:"LGW",k:"VK"},
+{c:"Londen",n:"City",i:"LCY",k:"VK"},{c:"Londen",n:"Stansted",i:"STN",k:"VK"},
+{c:"Manchester",n:"",i:"MAN",k:"VK"},{c:"Edinburgh",n:"",i:"EDI",k:"VK"},
+{c:"Dublin",n:"",i:"DUB",k:"Ierland"},{c:"Amsterdam",n:"Schiphol",i:"AMS",k:"Nederland"},
+{c:"Berlijn",n:"Brandenburg",i:"BER",k:"Duitsland"},{c:"München",n:"",i:"MUC",k:"Duitsland"},
+{c:"Frankfurt",n:"",i:"FRA",k:"Duitsland"},{c:"Hamburg",n:"",i:"HAM",k:"Duitsland"},
+{c:"Keulen",n:"Köln/Bonn",i:"CGN",k:"Duitsland"},{c:"Düsseldorf",n:"",i:"DUS",k:"Duitsland"},
+{c:"Stuttgart",n:"",i:"STR",k:"Duitsland"},{c:"Wenen",n:"",i:"VIE",k:"Oostenrijk"},
+{c:"Zürich",n:"",i:"ZRH",k:"Zwitserland"},{c:"Genève",n:"",i:"GVA",k:"Zwitserland"},
+{c:"Kopenhagen",n:"",i:"CPH",k:"Denemarken"},{c:"Stockholm",n:"Arlanda",i:"ARN",k:"Zweden"},
+{c:"Oslo",n:"Gardermoen",i:"OSL",k:"Noorwegen"},{c:"Helsinki",n:"",i:"HEL",k:"Finland"},
+{c:"Reykjavik",n:"Keflavík",i:"KEF",k:"IJsland"},{c:"Praag",n:"",i:"PRG",k:"Tsjechië"},
+{c:"Boedapest",n:"",i:"BUD",k:"Hongarije"},{c:"Warschau",n:"Chopin",i:"WAW",k:"Polen"},
+{c:"Krakau",n:"",i:"KRK",k:"Polen"},{c:"Boekarest",n:"Otopeni",i:"OTP",k:"Roemenië"},
+{c:"Athene",n:"",i:"ATH",k:"Griekenland"},{c:"Thessaloniki",n:"",i:"SKG",k:"Griekenland"},
+{c:"Heraklion",n:"Kreta",i:"HER",k:"Griekenland"},{c:"Rhodos",n:"",i:"RHO",k:"Griekenland"},
+{c:"Korfoe",n:"",i:"CFU",k:"Griekenland"},{c:"Istanbul",n:"Istanbul Airport",i:"IST",k:"Turkije"},
+{c:"Istanbul",n:"Sabiha Gökçen",i:"SAW",k:"Turkije"},{c:"Antalya",n:"",i:"AYT",k:"Turkije"},
+{c:"Izmir",n:"",i:"ADB",k:"Turkije"},{c:"Malta",n:"",i:"MLA",k:"Malta"},
+{c:"Larnaca",n:"Cyprus",i:"LCA",k:"Cyprus"},{c:"Split",n:"",i:"SPU",k:"Kroatië"},
+{c:"Dubrovnik",n:"",i:"DBV",k:"Kroatië"},{c:"Zagreb",n:"",i:"ZAG",k:"Kroatië"},
+{c:"Belgrado",n:"",i:"BEG",k:"Servië"},{c:"Sofia",n:"",i:"SOF",k:"Bulgarije"},
+{c:"Ljubljana",n:"",i:"LJU",k:"Slovenië"},{c:"Tirana",n:"",i:"TIA",k:"Albanië"},
+{c:"Podgorica",n:"",i:"TGD",k:"Montenegro"},{c:"Sarajevo",n:"",i:"SJJ",k:"Bosnië"},
+{c:"Tel Aviv",n:"Ben Gurion",i:"TLV",k:"Israël"},{c:"Beiroet",n:"",i:"BEY",k:"Libanon"},
+{c:"Caïro",n:"",i:"CAI",k:"Egypte"},{c:"Hurghada",n:"",i:"HRG",k:"Egypte"},
+{c:"Sharm el-Sheikh",n:"",i:"SSH",k:"Egypte"},{c:"Marrakech",n:"",i:"RAK",k:"Marokko"},
+{c:"Casablanca",n:"",i:"CMN",k:"Marokko"},{c:"Agadir",n:"",i:"AGA",k:"Marokko"},
+{c:"Nador",n:"",i:"NDR",k:"Marokko"},{c:"Tanger",n:"",i:"TNG",k:"Marokko"},
+{c:"Tunis",n:"",i:"TUN",k:"Tunesië"},{c:"Djerba",n:"",i:"DJE",k:"Tunesië"},
+{c:"Algiers",n:"",i:"ALG",k:"Algerije"},{c:"Dakar",n:"",i:"DSS",k:"Senegal"},
+{c:"Kinshasa",n:"",i:"FIH",k:"DR Congo"},{c:"Nairobi",n:"",i:"NBO",k:"Kenia"},
+{c:"Kigali",n:"",i:"KGL",k:"Rwanda"},{c:"Addis Abeba",n:"",i:"ADD",k:"Ethiopië"},
+{c:"Johannesburg",n:"",i:"JNB",k:"Zuid-Afrika"},{c:"Kaapstad",n:"",i:"CPT",k:"Zuid-Afrika"},
+{c:"Dubai",n:"",i:"DXB",k:"VAE"},{c:"Abu Dhabi",n:"",i:"AUH",k:"VAE"},
+{c:"Doha",n:"",i:"DOH",k:"Qatar"},{c:"Riyad",n:"",i:"RUH",k:"Saoedi-Arabië"},
+{c:"Bangkok",n:"Suvarnabhumi",i:"BKK",k:"Thailand"},{c:"Singapore",n:"Changi",i:"SIN",k:"Singapore"},
+{c:"Hongkong",n:"",i:"HKG",k:"Hongkong"},{c:"Tokio",n:"Haneda",i:"HND",k:"Japan"},
+{c:"Tokio",n:"Narita",i:"NRT",k:"Japan"},{c:"Peking",n:"Capital",i:"PEK",k:"China"},
+{c:"Shanghai",n:"Pudong",i:"PVG",k:"China"},{c:"New Delhi",n:"",i:"DEL",k:"India"},
+{c:"Mumbai",n:"",i:"BOM",k:"India"},{c:"New York",n:"JFK",i:"JFK",k:"VS"},
+{c:"New York",n:"Newark",i:"EWR",k:"VS"},{c:"Washington",n:"Dulles",i:"IAD",k:"VS"},
+{c:"Boston",n:"",i:"BOS",k:"VS"},{c:"Chicago",n:"O'Hare",i:"ORD",k:"VS"},
+{c:"Miami",n:"",i:"MIA",k:"VS"},{c:"Los Angeles",n:"",i:"LAX",k:"VS"},
+{c:"San Francisco",n:"",i:"SFO",k:"VS"},{c:"Atlanta",n:"",i:"ATL",k:"VS"},
+{c:"Toronto",n:"Pearson",i:"YYZ",k:"Canada"},{c:"Montreal",n:"",i:"YUL",k:"Canada"},
+{c:"Cancún",n:"",i:"CUN",k:"Mexico"},{c:"São Paulo",n:"Guarulhos",i:"GRU",k:"Brazilië"},
+{c:"Punta Cana",n:"",i:"PUJ",k:"Dominicaanse Rep."},{c:"Willemstad",n:"Curaçao",i:"CUR",k:"Curaçao"},
+{c:"Zanzibar",n:"",i:"ZNZ",k:"Tanzania"},{c:"Malé",n:"Malediven",i:"MLE",k:"Malediven"},
+{c:"Bakoe",n:"",i:"GYD",k:"Azerbeidzjan"},{c:"Tbilisi",n:"",i:"TBS",k:"Georgië"}
+];
+
+/* ---------------- State ---------------- */
+const state = { dest:null, trip:"return", dOut:"", dIn:"", flex:false, adults:1, children:0, cabin:"economy", direct:false, cabinbag:false };
+
+const $ = s => document.querySelector(s);
+const pad = n => String(n).padStart(2,"0");
+function isoPlus(days){ const d=new Date(); d.setDate(d.getDate()+days); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+function skyDate(iso){ return iso ? iso.slice(2).replace(/-/g,"") : ""; }
+const enc = encodeURIComponent;
+
+/* ---------------- Deeplink builders ---------------- */
+const cabinSky = {economy:"economy", premium:"premiumeconomy", business:"business", first:"first"};
+const cabinKayak = {economy:"", premium:"premium", business:"business", first:"first"};
+const cabinEn = {economy:"", premium:"premium economy", business:"business class", first:"first class"};
+
+function gflights(){
+  const d = state.dest; if(!d) return null;
+  let q = `Flights from Brussels BRU to ${d.c} ${d.i}`;
+  q += state.trip==="return" ? " round trip" : " one way";
+  if(state.dOut) q += ` departing ${state.dOut}`;
+  if(state.trip==="return" && state.dIn) q += ` returning ${state.dIn}`;
+  if(state.direct) q += " nonstop";
+  if(cabinEn[state.cabin]) q += ` ${cabinEn[state.cabin]}`;
+  return `https://www.google.com/travel/flights?curr=EUR&hl=nl&gl=BE&q=${enc(q)}`;
+}
+function skyscanner(){
+  const d = state.dest; if(!d||!state.dOut) return null;
+  let path = `/transport/vluchten/bru/${d.i.toLowerCase()}/${skyDate(state.dOut)}/`;
+  if(state.trip==="return" && state.dIn) path += `${skyDate(state.dIn)}/`;
+  const p = new URLSearchParams({
+    adultsv2:String(state.adults), childrenv2:"", cabinclass:cabinSky[state.cabin],
+    rtn: state.trip==="return"?"1":"0", preferdirects: state.direct?"true":"false",
+    currency:"EUR", market:"BE", locale:"nl-BE"
+  });
+  return `https://www.skyscanner.be${path}?${p.toString()}`;
+}
+function kayak(host){
+  const d = state.dest; if(!d||!state.dOut) return null;
+  let path = `/flights/BRU-${d.i}/${state.dOut}`;
+  if(state.trip==="return" && state.dIn) path += `/${state.dIn}`;
+  if(cabinKayak[state.cabin]) path += `/${cabinKayak[state.cabin]}`;
+  const pax = [];
+  if(state.adults>1) pax.push(`${state.adults}adults`);
+  if(state.children>0) pax.push(`${state.children}children`);
+  if(pax.length) path += `/${pax.join("-")}`;
+  let url = `https://${host}${path}?sort=price_a`;
+  if(state.direct) url += `&fs=stops%3D~0`;
+  return url;
+}
+function ryanair(){
+  const d = state.dest; if(!d||!state.dOut) return null;
+  const p = new URLSearchParams({
+    adults:String(state.adults), teens:"0", children:String(state.children), infants:"0",
+    dateOut: state.dOut, dateIn: (state.trip==="return"&&state.dIn)?state.dIn:"",
+    isConnectedFlight:"false", discount:"0", isReturn: state.trip==="return"?"true":"false",
+    promoCode:"", originIata:"BRU", destinationIata:d.i
+  });
+  return `https://www.ryanair.com/be/nl/trip/flights/select?${p.toString()}`;
+}
+
+/* Site catalogue */
+const META = [
+  {id:"gf",  nm:"Google Flights", ds:"Beste filters & prijskalender, doorzoekt alles", col:"#4285F4", ab:"G", build:gflights, badge:"ready"},
+  {id:"sky", nm:"Skyscanner",     ds:"Vergelijkt maatschappijen + OTA's, 'Overal'-zoek", col:"#0770E3", ab:"SK", build:skyscanner, badge:"ready"},
+  {id:"kay", nm:"Kayak",          ds:"Prijsvoorspelling & brede vergelijking", col:"#FF690F", ab:"KA", build:()=>kayak("www.kayak.be"), badge:"ready"},
+  {id:"mom", nm:"Momondo",        ds:"Vindt vaak net andere/lagere combinaties", col:"#E5158C", ab:"MO", build:()=>kayak("www.momondo.be"), badge:"ready"},
+  {id:"rya", nm:"Ryanair",        ds:"Rechtstreeks bij de lowcost — vult vooraf in", col:"#073590", ab:"RY", build:ryanair, badge:"deal", badgeTxt:"lowcost · ingevuld"}
+];
+const OTA = [
+  {id:"kiwi", nm:"Kiwi.com",       ds:"Slimme combinaties van losse tickets (virtual interlining)", col:"#00A991", ab:"KW", url:"https://www.kiwi.com/nl/"},
+  {id:"ct",   nm:"CheapTickets.be",ds:"Belgische boekingssite, veel promo's", col:"#E4002B", ab:"CT", url:"https://www.cheaptickets.be/vliegtickets"},
+  {id:"vt",   nm:"Vliegtickets.be",ds:"Belgische vergelijker & boekingssite", col:"#1466B8", ab:"VT", url:"https://www.vliegtickets.be/"},
+  {id:"ba",   nm:"BudgetAir.be",   ds:"Scherpe OTA-prijzen", col:"#F39200", ab:"BA", url:"https://www.budgetair.be/nl"},
+  {id:"exp",  nm:"Expedia.be",     ds:"Combineer met hotel voor extra korting", col:"#FFC94D", abInk:"#0B3D6B", ab:"EX", url:"https://www.expedia.be/Flights"},
+  {id:"ed",   nm:"eDreams",        ds:"Grote internationale OTA", col:"#00A0DF", ab:"ED", url:"https://www.edreams.be/"}
+];
+const AIRLINES = [
+  {nm:"Brussels Airlines", url:"https://www.brusselsairlines.com/be/nl/"},
+  {nm:"Ryanair", url:"https://www.ryanair.com/be/nl"},
+  {nm:"TUI fly", url:"https://www.tuifly.be/"},
+  {nm:"Vueling", url:"https://www.vueling.com/nl"},
+  {nm:"Lufthansa", url:"https://www.lufthansa.com/be/nl/homepage"},
+  {nm:"SWISS", url:"https://www.swiss.com/be/nl"},
+  {nm:"Austrian", url:"https://www.austrian.com/be/nl"},
+  {nm:"ITA Airways", url:"https://www.ita-airways.com/nl_be"},
+  {nm:"Iberia", url:"https://www.iberia.com/be/"},
+  {nm:"Air France", url:"https://www.airfrance.be/"},
+  {nm:"KLM", url:"https://www.klm.be/"},
+  {nm:"British Airways", url:"https://www.britishairways.com/nl-be/"},
+  {nm:"TAP Portugal", url:"https://www.flytap.com/nl-be/"},
+  {nm:"Emirates", url:"https://www.emirates.com/be/dutch/"},
+  {nm:"Qatar Airways", url:"https://www.qatarairways.com/nl-be/"},
+  {nm:"Turkish Airlines", url:"https://www.turkishairlines.com/nl-be/"},
+  {nm:"Etihad", url:"https://www.etihad.com/nl-be/"},
+  {nm:"United", url:"https://www.united.com/"},
+  {nm:"Air Canada", url:"https://www.aircanada.com/"},
+  {nm:"Ethiopian", url:"https://www.ethiopianairlines.com/"},
+  {nm:"RwandAir", url:"https://www.rwandair.com/"},
+  {nm:"Aegean", url:"https://nl.aegeanair.com/"},
+  {nm:"LOT", url:"https://www.lot.com/be/nl"},
+  {nm:"Royal Air Maroc", url:"https://www.royalairmaroc.com/be-nl"}
+];
+
+/* ---------------- Rendering ---------------- */
+function makeSiteRow(s){
+  const row = document.createElement("div"); row.className="site"; row.dataset.id=s.id;
+  const logo = document.createElement("div"); logo.className="logo";
+  logo.style.background=s.col; if(s.abInk) logo.style.color=s.abInk; logo.textContent=s.ab;
+  const meta = document.createElement("div"); meta.className="meta";
+  const nm = document.createElement("div"); nm.className="nm";
+  nm.append(document.createTextNode(s.nm));
+  const badge = document.createElement("span");
+  if(s.build){ badge.className="badge "+(s.badge||"ready"); badge.textContent=s.badgeTxt||"vooraf ingevuld"; }
+  else { badge.className="badge open"; badge.textContent="opent zoekpagina"; }
+  nm.append(badge);
+  const ds = document.createElement("div"); ds.className="ds"; ds.textContent=s.ds;
+  meta.append(nm,ds);
+  const a = document.createElement("a"); a.className="btn ghost sm go"; a.textContent="Openen ↗";
+  a.target="_blank"; a.rel="noopener"; a.href = s.url || "#";
+  row.append(logo,meta,a);
+  return {row, a, s};
+}
+const siteRefs = [];
+function renderSites(){
+  const mL=$("#metaList"), oL=$("#otaList");
+  META.forEach(s=>{ const r=makeSiteRow(s); mL.append(r.row); siteRefs.push(r); });
+  OTA.forEach(s=>{ const r=makeSiteRow(s); oL.append(r.row); siteRefs.push(r); });
+  const chips=$("#airlineChips");
+  AIRLINES.forEach(al=>{ const a=document.createElement("a"); a.href=al.url; a.target="_blank"; a.rel="noopener"; a.textContent=al.nm; chips.append(a); });
+}
+
+/* refresh all hrefs from state */
+function refresh(){
+  // board
+  $("#boardDest").textContent = state.dest ? state.dest.i : "— — —";
+  $("#boardCity").textContent = state.dest ? (state.dest.c + (state.dest.n? " · "+state.dest.n:"")) : "kies een bestemming";
+  // sites
+  siteRefs.forEach(r=>{
+    if(r.s.build){
+      const u = r.s.build();
+      r.a.href = u || "#";
+      r.a.classList.toggle("dim", !u);
+      r.a.textContent = u ? "Openen ↗" : "Kies datum";
+      r.a.style.opacity = u ? "1" : ".55";
+      r.a.style.pointerEvents = u ? "auto" : "none";
+    }
+  });
+  // track links
+  const gf = gflights();
+  $("#trackGoogle").href = gf || "#";
+  $("#trackGoogle").style.opacity = state.dest ? "1":".55";
+  $("#trackGoogle").style.pointerEvents = state.dest ? "auto":"none";
+  const sky = skyscanner() || (state.dest ? `https://www.skyscanner.be/transport/vluchten/bru/${state.dest.i.toLowerCase()}/` : "https://www.skyscanner.be/");
+  $("#trackSky").href = sky;
+  // one-way UI
+  $("#dInWrap").style.display = state.trip==="return" ? "block":"none";
+  saveSession();
+}
+
+/* ---------------- Destination search ---------------- */
+const destInput=$("#dest"), sug=$("#suggest");
+let hiIndex=-1, matches=[];
+function search(q){
+  q=q.trim().toLowerCase(); if(!q) return [];
+  const res=[];
+  for(const a of AIRPORTS){
+    const hay=(a.c+" "+a.n+" "+a.i+" "+a.k).toLowerCase();
+    if(a.i.toLowerCase()===q) res.unshift({a,score:0});
+    else if(hay.includes(q)) res.push({a,score: a.c.toLowerCase().startsWith(q)?1:2});
+  }
+  res.sort((x,y)=>x.score-y.score);
+  return res.slice(0,8).map(r=>r.a);
+}
+function renderSuggest(){
+  if(!matches.length){ sug.hidden=true; sug.innerHTML=""; return; }
+  sug.innerHTML="";
+  matches.forEach((a,idx)=>{
+    const b=document.createElement("button"); b.type="button"; if(idx===hiIndex) b.className="hi";
+    const code=document.createElement("span"); code.className="code"; code.textContent=a.i;
+    const t=document.createElement("span"); t.className="txt";
+    const nm=document.createElement("b"); nm.textContent=a.c + (a.n? " — "+a.n : "");
+    const sub=document.createElement("span"); sub.textContent=a.k;
+    t.append(nm,sub); b.append(code,t);
+    b.addEventListener("click",()=>pick(a));
+    sug.append(b);
+  });
+  sug.hidden=false;
+}
+function pick(a){
+  state.dest=a;
+  destInput.value = `${a.c}${a.n? " — "+a.n:""} (${a.i})`;
+  matches=[]; hiIndex=-1; sug.hidden=true; sug.innerHTML="";
+  refresh();
+}
+destInput.addEventListener("input",()=>{
+  state.dest=null;
+  // allow raw 3-letter IATA
+  const raw=destInput.value.trim().toUpperCase();
+  matches=search(destInput.value); hiIndex=-1; renderSuggest();
+  if(/^[A-Z]{3}$/.test(raw) && !AIRPORTS.some(a=>a.i===raw)){
+    state.dest={c:raw, n:"", i:raw, k:""};
+  }
+  refresh();
+});
+destInput.addEventListener("keydown",e=>{
+  if(sug.hidden) return;
+  if(e.key==="ArrowDown"){ e.preventDefault(); hiIndex=Math.min(hiIndex+1,matches.length-1); renderSuggest(); }
+  else if(e.key==="ArrowUp"){ e.preventDefault(); hiIndex=Math.max(hiIndex-1,0); renderSuggest(); }
+  else if(e.key==="Enter"){ if(hiIndex>=0){ e.preventDefault(); pick(matches[hiIndex]); } }
+  else if(e.key==="Escape"){ sug.hidden=true; }
+});
+document.addEventListener("click",e=>{ if(!e.target.closest(".dest-wrap")) sug.hidden=true; });
+
+/* ---------------- Controls ---------------- */
+function setTrip(t){
+  state.trip=t;
+  $("#tRet").setAttribute("aria-pressed", t==="return");
+  $("#tOne").setAttribute("aria-pressed", t==="one");
+  refresh();
+}
+$("#tRet").addEventListener("click",()=>setTrip("return"));
+$("#tOne").addEventListener("click",()=>setTrip("one"));
+$("#dOut").addEventListener("change",e=>{ state.dOut=e.target.value; if(state.dIn && state.dIn<state.dOut){ state.dIn=""; $("#dIn").value=""; } $("#dIn").min=e.target.value; refresh(); });
+$("#dIn").addEventListener("change",e=>{ state.dIn=e.target.value; refresh(); });
+$("#flex").addEventListener("change",e=>{ state.flex=e.target.checked; refresh(); });
+$("#adults").addEventListener("input",e=>{ state.adults=Math.max(1,+e.target.value||1); refresh(); });
+$("#children").addEventListener("input",e=>{ state.children=Math.max(0,+e.target.value||0); refresh(); });
+$("#cabin").addEventListener("change",e=>{ state.cabin=e.target.value; refresh(); });
+$("#direct").addEventListener("change",e=>{ state.direct=e.target.checked; refresh(); });
+$("#cabinbag").addEventListener("change",e=>{ state.cabinbag=e.target.checked; });
+
+/* Open all */
+$("#openAll").addEventListener("click",e=>{
+  e.preventDefault();
+  if(!state.dest){ destInput.focus(); flash("Kies eerst een bestemming"); return; }
+  const urls = META.map(s=>s.build && s.build()).filter(Boolean);
+  if(!urls.length){ flash("Kies eerst een vertrekdatum"); return; }
+  urls.forEach((u,idx)=> setTimeout(()=>window.open(u,"_blank","noopener"), idx*250));
+});
+function flash(msg){
+  const n=$("#popupNote"); const old=n.innerHTML;
+  n.innerHTML=`<strong style="color:var(--accent)">${msg}.</strong>`;
+  setTimeout(()=>{ n.innerHTML=old; }, 2600);
+}
+
+/* ---------------- Favorites (localStorage) ---------------- */
+const FAV_KEY="zvz_favs_v1", SES_KEY="zvz_session_v1";
+function getFavs(){ try{ return JSON.parse(localStorage.getItem(FAV_KEY)||"[]"); }catch(e){ return []; } }
+function setFavs(f){ try{ localStorage.setItem(FAV_KEY, JSON.stringify(f)); }catch(e){} }
+function renderFavs(){
+  const wrap=$("#favList"); const favs=getFavs(); wrap.innerHTML="";
+  if(!favs.length){ const p=document.createElement("p"); p.className="empty"; p.textContent="Nog geen bestemmingen bewaard."; wrap.append(p); return; }
+  favs.forEach((f,idx)=>{
+    const row=document.createElement("div"); row.className="fav-row";
+    const code=document.createElement("span"); code.className="code"; code.textContent=f.i;
+    const nm=document.createElement("div"); nm.className="nm";
+    nm.innerHTML = `${f.c}${f.n? " — "+f.n:""}<small>${f.k||""}</small>`;
+    const use=document.createElement("button"); use.className="btn ghost sm"; use.textContent="Invullen";
+    use.addEventListener("click",()=>{ pick(f); window.scrollTo({top:0,behavior:"smooth"}); });
+    const rm=document.createElement("button"); rm.className="rm"; rm.textContent="✕"; rm.title="Verwijderen";
+    rm.addEventListener("click",()=>{ const a=getFavs(); a.splice(idx,1); setFavs(a); renderFavs(); });
+    row.append(code,nm,use,rm); wrap.append(row);
+  });
+}
+$("#saveFav").addEventListener("click",()=>{
+  if(!state.dest){ flash("Kies eerst een bestemming"); destInput.focus(); return; }
+  const favs=getFavs();
+  if(favs.some(f=>f.i===state.dest.i)){ renderFavs(); return; }
+  favs.push({c:state.dest.c,n:state.dest.n,i:state.dest.i,k:state.dest.k}); setFavs(favs); renderFavs();
+});
+
+/* ---------------- Session restore ---------------- */
+function saveSession(){
+  try{ localStorage.setItem(SES_KEY, JSON.stringify(state)); }catch(e){}
+}
+function restoreSession(){
+  let s=null; try{ s=JSON.parse(localStorage.getItem(SES_KEY)||"null"); }catch(e){}
+  if(s){ Object.assign(state,s); }
+  else { state.dOut=isoPlus(30); state.dIn=isoPlus(37); state.dest=AIRPORTS.find(a=>a.i==="BCN"); }
+  // reflect to UI
+  if(state.dest) destInput.value=`${state.dest.c}${state.dest.n? " — "+state.dest.n:""} (${state.dest.i})`;
+  $("#dOut").value=state.dOut||""; $("#dIn").value=state.dIn||""; if(state.dOut) $("#dIn").min=state.dOut;
+  $("#adults").value=state.adults; $("#children").value=state.children;
+  $("#cabin").value=state.cabin; $("#direct").checked=state.direct; $("#flex").checked=state.flex; $("#cabinbag").checked=state.cabinbag;
+  setTrip(state.trip);
+}
+
+/* ---------------- Theme ---------------- */
+const TH_KEY="zvz_theme";
+function applyTheme(t){ if(t==="light"||t==="dark") document.documentElement.setAttribute("data-theme",t); else document.documentElement.removeAttribute("data-theme"); }
+(function(){ let t=null; try{ t=localStorage.getItem(TH_KEY); }catch(e){} if(t) applyTheme(t); })();
+$("#themeToggle").addEventListener("click",()=>{
+  const cur=document.documentElement.getAttribute("data-theme");
+  const dark = cur ? cur==="dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  const next = dark? "light":"dark"; applyTheme(next);
+  try{ localStorage.setItem(TH_KEY,next); }catch(e){}
+});
+
+/* ---------------- Init ---------------- */
+renderSites();
+restoreSession();
+renderFavs();
+refresh();
+</script>
+</body>
+</html>

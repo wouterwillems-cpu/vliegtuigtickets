@@ -463,15 +463,28 @@ const cabinSky = {economy:"economy", premium:"premiumeconomy", business:"busines
 const cabinKayak = {economy:"", premium:"premium", business:"business", first:"first"};
 const cabinEn = {economy:"", premium:"premium economy", business:"business class", first:"first class"};
 
+/* Google Flights deep link: builds the real tfs token with the AIRPORT code
+   BRU (not the city "Brussel", which would include Charleroi). */
+function gfVarint(n){const out=[];let v=n;do{let b=v%128;v=Math.floor(v/128);if(v>0)b|=0x80;out.push(b);}while(v>0);return out;}
+function gfKey(f,wt){return gfVarint((f<<3)|wt);}
+function gfStrF(f,s){const b=Array.from(new TextEncoder().encode(s));return gfKey(f,2).concat(gfVarint(b.length),b);}
+function gfMsgF(f,a){return gfKey(f,2).concat(gfVarint(a.length),a);}
+function gfViF(f,v){return gfKey(f,0).concat(gfVarint(v));}
+function gfAirport(c){return gfViF(1,1).concat(gfStrF(2,c));}
+function gfLegF(d,frm,to){return gfStrF(2,d).concat(gfMsgF(13,gfAirport(frm)),gfMsgF(14,gfAirport(to)));}
+function gfB64url(bytes){let bin="";for(const b of bytes)bin+=String.fromCharCode(b);return btoa(bin).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");}
 function gflights(){
-  const d = state.dest; if(!d) return null;
-  let q = `Flights from Brussels BRU to ${d.c} ${d.i}`;
-  q += state.trip==="return" ? " round trip" : " one way";
-  if(state.dOut) q += ` departing ${state.dOut}`;
-  if(state.trip==="return" && state.dIn) q += ` returning ${state.dIn}`;
-  if(state.direct) q += " nonstop";
-  if(cabinEn[state.cabin]) q += ` ${cabinEn[state.cabin]}`;
-  return `https://www.google.com/travel/flights?curr=EUR&hl=nl&gl=BE&q=${enc(q)}`;
+  const d = state.dest; if(!d || !state.dOut) return null;
+  const seat = {economy:1, premium:2, business:3, first:4}[state.cabin] || 1;
+  const round = state.trip==="return" && !!state.dIn;
+  let body = [].concat(gfViF(1,28), gfViF(2,2));
+  body = body.concat(gfMsgF(3, gfLegF(state.dOut, "BRU", d.i)));
+  if(round) body = body.concat(gfMsgF(3, gfLegF(state.dIn, d.i, "BRU")));
+  body = body.concat(gfViF(8,seat), gfViF(9, Math.max(1, state.adults)), gfViF(14,1));
+  const big = [0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0x01];
+  body = body.concat(gfMsgF(16, gfKey(1,0).concat(big)));
+  body = body.concat(gfViF(19, round?1:2));
+  return `https://www.google.com/travel/flights/search?tfs=${gfB64url(body)}&hl=nl&gl=BE&curr=EUR`;
 }
 function skyscanner(){
   const d = state.dest; if(!d||!state.dOut) return null;
@@ -512,7 +525,7 @@ function ryanair(){
 const META = [
   {id:"gf",  nm:"Google Flights", ds:"Beste filters & prijskalender, doorzoekt alles", col:"#4285F4", ab:"G", build:gflights, badge:"ready"},
   {id:"sky", nm:"Skyscanner",     ds:"Vergelijkt maatschappijen + OTA's, 'Overal'-zoek", col:"#0770E3", ab:"SK", build:skyscanner, badge:"ready"},
-  {id:"kay", nm:"Kayak",          ds:"Prijsvoorspelling & brede vergelijking", col:"#FF690F", ab:"KA", build:()=>kayak("www.kayak.be"), badge:"ready"},
+  {id:"kay", nm:"Kayak",          ds:"Prijsvoorspelling & brede vergelijking", col:"#FF690F", ab:"KA", build:()=>kayak("www.be.kayak.com"), badge:"ready"},
   {id:"mom", nm:"Momondo",        ds:"Vindt vaak net andere/lagere combinaties", col:"#E5158C", ab:"MO", build:()=>kayak("www.momondo.be"), badge:"ready"},
   {id:"rya", nm:"Ryanair",        ds:"Rechtstreeks bij de lowcost — vult vooraf in", col:"#073590", ab:"RY", build:ryanair, badge:"deal", badgeTxt:"lowcost · ingevuld"}
 ];
@@ -766,7 +779,7 @@ const CLAUDE_RESULTS = [
       {air:"Brussels Airlines", tm:"heen 14:35–17:05 · rechtstreeks", price:"€379"},
       {air:"Transavia", tm:"heen 15:30–18:00 · rechtstreeks", price:"€423"}
     ],
-    note:"Vanuit Charleroi (CRL) is Ryanair rechtstreeks €210 — fors goedkoper als je tóch van Charleroi wil. Vanuit Zaventem met 1 overstap vanaf €197 (14u via Wenen — niet de moeite)."
+    note:"Rechtstreeks vanuit Zaventem is €344 de goedkoopste in deze week. Met 1 overstap kan het vanaf €197 (Austrian via Wenen), maar dat is 14u reistijd — niet de moeite."
   }
 ];
 function renderResults(){
